@@ -48,7 +48,7 @@ module MasterMind
     @@coloured_symbols = @@colours.map {|element| @@circle.colorize(element.to_sym)} 
     @@hint_symbols = [@@empty_circle,@@circle, @@circle.colorize(:red)]
 
-    attr_reader :board, :hint, :turns
+    attr_reader :board, :hint, :turns, :player
 
     def initialize()
       puts "welcome to mastermind, please choose the game mode"
@@ -56,6 +56,7 @@ module MasterMind
       @turns = ask_for_number_of_turns 
       @board = Array.new(@turns) { Array.new(4)}
       @hint = Array.new(@turns)  { Array.new(4)}
+      @player = human_or_computer_player(@game_mode)
     end
 
     #make your select between game mode
@@ -79,6 +80,77 @@ module MasterMind
       end 
       answer
     end
+
+    #setting different classes to @player depends on the game mode
+    def human_or_computer_player(game_mode)
+      return HumanPlayer.new(board) if game_mode == 1
+      return ComputerPlayer.new(board) if game_mode == 2
+    end
+
+    ##call this method to play the game
+    def play_game
+      turns.times do |turn|
+        player.place_symbols(turn,ask_player_for_codes())
+        draw_board_and_hints
+      end
+    end
+
+    #get 4 codes from user
+    def ask_player_for_codes      
+      codes_completed = false
+      codes = Array.new
+      loop do
+        # codes  = 4.times.map { |code| code = ask_for_a_code}
+        4.times {|number| codes.push(ask_for_a_code(codes))}
+        codes_completed = are_you_sure_about_your_codes_choices?(codes)
+        codes.clear if codes_completed == false
+        break codes if codes_completed == true
+      end
+    end
+
+
+    #ask user to choose a single code. 
+    def ask_for_a_code(codes)
+      #array of name of colours and symbols with coresponding number for code
+      colours_and_symbols = Array.new(@@colours.size) { |number| "Type ~ #{number + 1} ~ for #{@@colours[number]}(#{@@coloured_symbols[number]}) " }
+      # colours_and_symbols = Array.new(@@colours.size) { |number| "#{@@colours[number]}(#{@@coloured_symbols[number]}): type #{number + 1}" }
+
+      answer =loop do
+        puts "--------------------------------"
+        puts colours_and_symbols 
+        print "\n Code number #{(codes.size + 1)})".colorize(:yellow) + " \n Type number between " + "1 ~ 8".colorize(:red) + " to select colours"
+        puts show_current_codes(codes)
+        answer = gets.chomp.to_i
+        break answer - 1 if (0..8).to_a.include?(answer) 
+      end
+
+    end
+
+    #show the codes the user selected so far
+    def show_current_codes(inputs)
+      codes = inputs.map do |element| 
+        if element == nil
+          element = @@empty_circle
+        else
+          element = @@coloured_symbols[element]
+        end  
+      end
+      print " | current inputs : "
+      print "{#{codes.join("|")}}"
+    end
+
+    #asking your if they made right choice for the row of codes
+    def are_you_sure_about_your_codes_choices?(codes)
+      answer = loop do 
+        show_current_codes(codes)
+        puts " Are you sure about your inputs? type: 'y' for yes, 'n' for no "
+        answer =gets.chomp 
+        break answer if ['y','n'].include?(answer)
+      end
+      answer == 'y'?  true :   false
+    end
+
+
 
     #draws game board
     def draw_board_and_hints
@@ -112,6 +184,30 @@ module MasterMind
       end
     end
   end
+
+  class Player 
+
+    attr_reader :game_board
+
+    def initialize(board)
+      @game_board = board 
+    end
+
+    def place_symbols(turn, arr)
+      game_board[turn] = arr  
+    end
+
+  end
+
+  class HumanPlayer < Player
+
+  end
+
+  class ComputerPlayer <Player
+    
+  end
+
+
 end
 
 
@@ -119,8 +215,14 @@ include MasterMind
 
 new_game = Game.new() 
 
-new_game.random_num_gen
+# new_game.random_num_gen
 
-new_game.draw_board_and_hints
+# new_game.draw_board_and_hints
+
+# new_game.test
+# 
+new_game.play_game
+
+
 
 # puts new_game.board
