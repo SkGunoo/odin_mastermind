@@ -160,7 +160,7 @@ module MasterMind
       ##combine each row from two arrays as a element of new array
       completed_game_board = turns.times.map {|row|"     { #{get_one_row(row,board,@@coloured_symbols)} }    hint: [ #{get_one_row(row,hint,@@hint_symbols)} ]"}
       ##so, i can add the visual seperaters with code below
-      puts completed_game_board.join("\n---------------------------------------\n")     
+      puts completed_game_board.reverse.join("\n---------------------------------------\n")     
       3.times {puts ""}
 
     end
