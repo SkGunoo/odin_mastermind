@@ -34,7 +34,7 @@
 ##computerPlayer class < player
   #methods to choose the colours with ai
     #how am i gonna write the code for this? idk..  
-## rubocop: enable all
+# rubocop: enable all
 
 require 'colorize'
 
@@ -47,8 +47,8 @@ module MasterMind
     @@empty_circle = "○"
     @@coloured_symbols = @@colours.map {|element| @@circle.colorize(element.to_sym)} 
     @@hint_symbols = [@@empty_circle,@@circle, @@circle.colorize(:red)]
-
-    attr_reader :board, :hint, :turns, :player, :code_to_guess
+    attr_accessor :player
+    attr_reader :board, :hint, :turns, :code_to_guess, :game_mode
 
     def initialize()
       puts "welcome to mastermind, please choose the game mode"
@@ -57,8 +57,8 @@ module MasterMind
       @board = Array.new(@turns) { Array.new(4)}
       @hint = Array.new(@turns)  { Array.new(4)}
       @player = human_or_computer_player(@game_mode)
-      @code_to_guess = (0..7).to_a.shuffle[0..3]
-      # @code_to_guess = [0,4,5,7]
+      # @code_to_guess = (0..7).to_a.shuffle[0..3]
+      @code_to_guess = [0,4,5,7]
 
     end
 
@@ -75,7 +75,7 @@ module MasterMind
 
     #how many turns the user want? 
     def ask_for_number_of_turns
-      turn_range = (12..20).to_a
+      turn_range = (1..20).to_a
       answer = nil
       until turn_range.include?(answer)
         puts "choose number of turns, between 12 - 20"
@@ -95,8 +95,53 @@ module MasterMind
       turns.times do |turn|
         player.place_symbols(turn,ask_player_for_codes())
         update_hint_board(turn)
+        break if game_won_or_lost?(turn)
         draw_board_and_hints
       end
+    end
+
+    def game_won_or_lost?(turn)
+      if board[turn] == code_to_guess
+        game_won
+      else
+        game_lost
+      end
+    end
+
+    def game_won
+      draw_board_and_hints
+      puts "you won the game!!!!"
+      if try_again?
+        restart_game
+      else
+        true
+      end
+    end
+
+    def game_lost
+      puts "sorry, you lost"
+      print "the answer was:  " 
+      show_current_codes(code_to_guess) 
+      puts ""
+      if try_again?
+        restart_game
+      else
+        true
+      end
+    end
+
+    def try_again?
+      answer = loop do
+        puts "do you want to play again? type 'y' for yes 'n' for no"
+        answer = gets.downcase.chomp
+        break answer if ['y','n'].include?(answer)
+      end
+      answer == 'y' ? true : false
+    end
+
+    def restart_game
+      initialize
+      play_game
     end
      
     #update hint board with coresponding pins
