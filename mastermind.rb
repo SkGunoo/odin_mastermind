@@ -48,7 +48,7 @@ module MasterMind
     @@coloured_symbols = @@colours.map {|element| @@circle.colorize(element.to_sym)} 
     @@hint_symbols = [@@empty_circle,@@circle, @@circle.colorize(:red)]
 
-    attr_reader :board, :hint, :turns, :player
+    attr_reader :board, :hint, :turns, :player, :code_to_guess
 
     def initialize()
       puts "welcome to mastermind, please choose the game mode"
@@ -57,6 +57,9 @@ module MasterMind
       @board = Array.new(@turns) { Array.new(4)}
       @hint = Array.new(@turns)  { Array.new(4)}
       @player = human_or_computer_player(@game_mode)
+      @code_to_guess = (0..7).to_a.shuffle[0..3]
+      # @code_to_guess = [0,4,5,7]
+
     end
 
     #make your select between game mode
@@ -91,8 +94,35 @@ module MasterMind
     def play_game
       turns.times do |turn|
         player.place_symbols(turn,ask_player_for_codes())
+        update_hint_board(turn)
         draw_board_and_hints
       end
+    end
+     
+    #update hint board with coresponding pins
+    def update_hint_board(turn)
+      hints = check_for_hints(turn)
+      update_hint(hints,turn)
+    end
+
+    #checks hint based on current board
+    def check_for_hints(turn) 
+     red_pins = []
+     board[turn].each_with_index {|number, index| red_pins.push(number) if number == code_to_guess[index] }
+     rejected = board[turn].reject {| number | red_pins.include?(number)}
+     white_pin = []
+     rejected.uniq.each {|number| white_pin.push(number) if code_to_guess.include?(number)}
+     return [red_pins.size, white_pin.size]
+    end
+
+    #1 unshift hint pins to hint[turn] array.
+    #2 this will make hint[turn] array bigger than 4
+    #3 shave off array elements after 4th one by using [0..3]
+    def update_hint(hints,turn)
+      #need to put white pins first
+      hints[1].times {|number| hint[turn].unshift(1)}
+      hints[0].times {|number| hint[turn].unshift(2)}
+      hint[turn] = hint[turn][0..3]
     end
 
     #get 4 codes from user
@@ -112,14 +142,19 @@ module MasterMind
     #ask user to choose a single code. 
     def ask_for_a_code(codes)
       #array of name of colours and symbols with coresponding number for code
-      colours_and_symbols = Array.new(@@colours.size) { |number| "Type ~ #{number + 1} ~ for #{@@colours[number]}(#{@@coloured_symbols[number]}) " }
+      colours_and_symbols = Array.new(@@colours.size) { |number| "Type" + " #{number + 1} ".colorize(@@colours[number].to_sym) + "for #{@@colours[number]}(#{@@coloured_symbols[number]})" }
       # colours_and_symbols = Array.new(@@colours.size) { |number| "#{@@colours[number]}(#{@@coloured_symbols[number]}): type #{number + 1}" }
 
+      
       answer =loop do
         puts "--------------------------------"
-        puts colours_and_symbols 
-        print "\n Code number #{(codes.size + 1)})".colorize(:yellow) + " \n Type number between " + "1 ~ 8".colorize(:red) + " to select colours"
+        draw_board_and_hints
+        puts colours_and_symbols.join("\n-\n") 
+        ###delete this for answer preview
+        # puts show_current_codes(code_to_guess)
+        print "\n Code number #{(codes.size + 1)})".colorize(:yellow) + " \n Type number between " + "1 ~ 8".colorize(:red) + " then press enter | my current code input:"
         puts show_current_codes(codes)
+        print " My code: "
         answer = gets.chomp.to_i
         break answer - 1 if (0..8).to_a.include?(answer) 
       end
@@ -135,7 +170,7 @@ module MasterMind
           element = @@coloured_symbols[element]
         end  
       end
-      print " | current inputs : "
+      # print " | current inputs : "
       print "{#{codes.join("|")}}"
     end
 
@@ -156,12 +191,12 @@ module MasterMind
     def draw_board_and_hints
       ##      {o|o|o|o}  hint: [|o|o|o|o|] 
       #some buffer for better terminal viewing experience
-      3.times {puts ""}
+      2.times {puts ""}
       ##combine each row from two arrays as a element of new array
       completed_game_board = turns.times.map {|row|"     { #{get_one_row(row,board,@@coloured_symbols)} }    hint: [ #{get_one_row(row,hint,@@hint_symbols)} ]"}
       ##so, i can add the visual seperaters with code below
       puts completed_game_board.reverse.join("\n---------------------------------------\n")     
-      3.times {puts ""}
+      2.times {puts ""}
 
     end
 
