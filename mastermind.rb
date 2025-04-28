@@ -57,8 +57,8 @@ module MasterMind
       @board = Array.new(@turns) { Array.new(4)}
       @hint = Array.new(@turns)  { Array.new(4)}
       @player = human_or_computer_player(@game_mode)
-      # @code_to_guess = (0..7).to_a.shuffle[0..3]
-      @code_to_guess = [0,4,5,7]
+      @code_to_guess = (0..7).to_a.shuffle[0..3]
+      # @code_to_guess = [0,4,5,7]
 
     end
 
@@ -75,7 +75,7 @@ module MasterMind
 
     #how many turns the user want? 
     def ask_for_number_of_turns
-      turn_range = (1..20).to_a
+      turn_range = (2..20).to_a
       answer = nil
       until turn_range.include?(answer)
         puts "choose number of turns, between 12 - 20"
@@ -96,6 +96,7 @@ module MasterMind
         player.place_symbols(turn,ask_player_for_codes())
         update_hint_board(turn)
         break if game_won_or_lost?(turn)
+        # puts "hahahahahh"
         draw_board_and_hints
       end
     end
@@ -103,7 +104,8 @@ module MasterMind
     def game_won_or_lost?(turn)
       if board[turn] == code_to_guess
         game_won
-      else
+      
+      elsif turns - 1 == turn
         game_lost
       end
     end
@@ -171,7 +173,7 @@ module MasterMind
     end
 
     #get 4 codes from user
-    def ask_player_for_codes      
+    def ask_player_for_codes
       codes_completed = false
       codes = Array.new
       loop do
@@ -274,7 +276,7 @@ module MasterMind
     end
 
     def place_symbols(turn, arr)
-      game_board[turn] = arr  
+      game_board[turn] = arr
     end
 
   end
@@ -285,6 +287,7 @@ module MasterMind
 
   class ComputerPlayer <Player
     
+  
   end
 
 
