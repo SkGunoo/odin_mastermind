@@ -56,8 +56,8 @@ module MasterMind
       @turns = ask_for_number_of_turns 
       @board = Array.new(@turns) { Array.new(4)}
       @hint = Array.new(@turns)  { Array.new(4)}
-      @player = human_or_computer_player(@game_mode)
       @code_to_guess = (0..7).to_a.shuffle[0..3]
+      @player = human_or_computer_player(@game_mode)
       # @code_to_guess = [0,4,5,7]
 
     end
@@ -78,7 +78,7 @@ module MasterMind
       turn_range = (2..20).to_a
       answer = nil
       until turn_range.include?(answer)
-        puts "choose number of turns, between 12 - 20"
+        puts "choose number of turns, between 12 - 20(lower turns are harder)"
         answer = gets.chomp.to_i 
       end 
       answer
@@ -87,16 +87,33 @@ module MasterMind
     #setting different classes to @player depends on the game mode
     def human_or_computer_player(game_mode)
       return HumanPlayer.new(board) if game_mode == 1
-      return ComputerPlayer.new(board) if game_mode == 2
+      return ComputerPlayer.new(board, code_to_guess) if game_mode == 2
     end
 
     ##call this method to play the game
     def play_game
+      if game_mode == 1
+        human_player_playing_game
+      else
+        computer_player_playing_game
+      end
+    end
+
+    def human_player_playing_game 
       turns.times do |turn|
         player.place_symbols(turn,ask_player_for_codes())
         update_hint_board(turn)
         break if game_won_or_lost?(turn)
         # puts "hahahahahh"
+        draw_board_and_hints
+      end
+    end
+
+    def computer_player_playing_game
+      turns.times do |turn|
+        player.place_symbols(turn,player.computer_passes_the_codes(turn))
+        update_hint_board(turn)
+        break if game_won_or_lost?(turn)
         draw_board_and_hints
       end
     end
@@ -112,7 +129,13 @@ module MasterMind
 
     def game_won
       draw_board_and_hints
-      puts "you won the game!!!!"
+      if game_mode == 1
+        puts "you won the game!!!!"
+      else
+        guessed = " guessed "
+        puts "computer".colorize(:yellow) +  "\e[9m#{guessed}\e[0m"  + "cheated".colorize(:red) + " successfully"
+      end
+        
       if try_again?
         restart_game
       else
@@ -185,20 +208,16 @@ module MasterMind
       end
     end
 
-
     #ask user to choose a single code. 
     def ask_for_a_code(codes)
       #array of name of colours and symbols with coresponding number for code
       colours_and_symbols = Array.new(@@colours.size) { |number| "Type" + " #{number + 1} ".colorize(@@colours[number].to_sym) + "for #{@@colours[number]}(#{@@coloured_symbols[number]})" }
       # colours_and_symbols = Array.new(@@colours.size) { |number| "#{@@colours[number]}(#{@@coloured_symbols[number]}): type #{number + 1}" }
 
-      
       answer =loop do
         puts "--------------------------------"
         draw_board_and_hints
         puts colours_and_symbols.join("\n-\n") 
-        ###delete this for answer preview
-        # puts show_current_codes(code_to_guess)
         print "\n Code number #{(codes.size + 1)})".colorize(:yellow) + " \n Type number between " + "1 ~ 8".colorize(:red) + " then press enter | my current code input:"
         puts show_current_codes(codes)
         print " My code: "
@@ -210,12 +229,12 @@ module MasterMind
 
     #show the codes the user selected so far
     def show_current_codes(inputs)
-      codes = inputs.map do |element| 
+      codes = inputs.map do |element|
         if element == nil
           element = @@empty_circle
         else
           element = @@coloured_symbols[element]
-        end  
+        end
       end
       # print " | current inputs : "
       print "{#{codes.join("|")}}"
@@ -226,7 +245,7 @@ module MasterMind
       answer = loop do 
         show_current_codes(codes)
         puts " Are you sure about your inputs? type: 'y' for yes, 'n' for no "
-        answer =gets.chomp 
+        answer =gets.chomp
         break answer if ['y','n'].include?(answer)
       end
       answer == 'y'?  true :   false
@@ -240,7 +259,7 @@ module MasterMind
       #some buffer for better terminal viewing experience
       2.times {puts ""}
       ##combine each row from two arrays as a element of new array
-      completed_game_board = turns.times.map {|row|"     { #{get_one_row(row,board,@@coloured_symbols)} }    hint: [ #{get_one_row(row,hint,@@hint_symbols)} ]"}
+      completed_game_board = turns.times.map {|row|" turn: #{(row + 1).to_s.rjust(2,'0').colorize(:yellow)}    { #{get_one_row(row,board,@@coloured_symbols)} }    hint: [ #{get_one_row(row,hint,@@hint_symbols)} ]"}
       ##so, i can add the visual seperaters with code below
       puts completed_game_board.reverse.join("\n---------------------------------------\n")     
       2.times {puts ""}
@@ -287,10 +306,78 @@ module MasterMind
 
   class ComputerPlayer <Player
     
-  
+    attr_accessor :robot_guess, :robot_cheat_sheet
+    attr_reader :code_to_guess,:game_board
+    def initialize(board,answer)
+      @game_board = board 
+      @code_to_guess = answer  
+      @robot_guess = Array.new(4,nil)
+      #adds hash of useful information so computer can cheat 
+      @robot_cheat_sheet = (0..7).to_a.each_with_object([]){|num,array| array[num] = {"number" => num,"part of answer?"=>false,"know the position?"=> false ,"what position?"=> nil} }
+    end
+
+    def ask_user_to_proceed_to_next_turn
+      puts "let computer to take its turn? (press enter)"
+     
+      gets 
+      
+    end
+
+
+    def computer_passes_the_codes(turn)
+      ask_user_to_proceed_to_next_turn
+      if turn < 2
+        codes_for_first_two_turns(turn)
+         puts "robot guess : #{robot_guess}"
+        update_cheatsheet(@robot_guess)
+        return @robot_guess
+      else
+        update_robot_guess_with_codes_that_robot_know_position
+        update_robot_guess_with_codes_that_robot_dont_know_position
+        update_cheatsheet(@robot_guess)
+
+        return @robot_guess
+      end
+    end
+
+    def codes_for_first_two_turns(turn)
+      @robot_guess = [0,1,2,3] if turn == 0
+      @robot_guess =[4,5,6,7] if turn == 1
+    end
+
+    def update_robot_guess_with_codes_that_robot_know_position
+      #reset array for new answer
+      @robot_guess =  Array.new(4,nil)
+      robot_cheat_sheet.each_with_index do |hash, index|
+        if hash["part of answer?"] == true && hash["know the position?"] == true
+          #index is equal to a code to guess because array indices are equal to the numbers to guess
+          @robot_guess[hash["what position?"]] = index
+        end
+      end
+    end
+
+    def update_robot_guess_with_codes_that_robot_dont_know_position
+      robot_guess_indices_of_nils = Array.new
+      @robot_guess.each_with_index { |code, index| robot_guess_indices_of_nils.push(index) if code == nil}
+      #get the codes that we dont know their positions
+      codes_that_computer_dont_know_its_position = robot_cheat_sheet.filter_map{|hash| hash["number"] if hash["part of answer?"] == true && hash["know the position?"] == false}
+      robot_guess_indices_of_nils.shuffle.each_with_index {|index, iteration_index| robot_guess[index] = codes_that_computer_dont_know_its_position[iteration_index]}
+    end
+
+
+    def update_cheatsheet(robot_guess_codes)
+      robot_guess_codes.each_with_index do |code, index|
+        if code_to_guess.include?(code)
+          robot_cheat_sheet[code]["part of answer?"] = true
+          #if one of the guess is right number AND at the right position update the hash
+          if code == code_to_guess[index]
+            robot_cheat_sheet[code]["know the position?"] = true
+            robot_cheat_sheet[code]["what position?"] = index
+          end
+        end
+      end
+    end
   end
-
-
 end
 
 
@@ -298,14 +385,5 @@ include MasterMind
 
 new_game = Game.new() 
 
-# new_game.random_num_gen
-
-# new_game.draw_board_and_hints
-
-# new_game.test
 # 
 new_game.play_game
-
-
-
-# puts new_game.board
