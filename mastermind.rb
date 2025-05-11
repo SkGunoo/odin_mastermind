@@ -21,10 +21,12 @@ module MasterMind
       @hint = Array.new(@turns)  { Array.new(4)}
       @code_to_guess = (0..7).to_a.shuffle[0..3]
       @player = human_or_computer_player(@game_mode)
+      play_game
       # @code_to_guess = [0,4,5,7]
 
     end
 
+    private
     #make your select between game mode
     def ask_game_mode 
       available_modes = [1,2]
@@ -259,7 +261,7 @@ module MasterMind
   class Player 
 
     attr_reader :game_board
-
+    
     def initialize(board)
       @game_board = board 
     end
@@ -353,10 +355,10 @@ end
 
 include MasterMind
 
-new_game = Game.new() 
+Game.new()
 
 # 
-new_game.play_game
+
 
 
 
